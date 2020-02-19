@@ -156,6 +156,3 @@ pip-selfcheck.json
 test_videos/
 
 weights/
-
-coco.names
-
