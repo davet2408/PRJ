@@ -29,8 +29,8 @@ def receive():
     while True:
         ret, frame = cap.read()
         if not ret:
-            input("wait")
             print("empty frame")
+            input("wait")
             continue
 
         frame_time = time.time()
@@ -53,6 +53,7 @@ def receive():
         confidences = []
         boxes = []
         for out in outs:
+            print(out.shape)
             for detection in out:
                 scores = detection[5:]
                 class_id = np.argmax(scores)

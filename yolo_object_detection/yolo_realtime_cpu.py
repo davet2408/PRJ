@@ -3,7 +3,7 @@ import numpy as np
 import time
 
 # Load Yolo
-net = cv2.dnn.readNet("weights/yolov3-tiny.weights", "cfg/yolov3-tiny.cfg")
+net = cv2.dnn.readNet("weights/yolov3.weights", "cfg/yolov3.cfg")
 # Load Tiny-Yolo
 # net = cv2.dnn.readNet("weights/yolov3-tiny.weights", "cfg/yolov3-tiny.cfg")
 classes = []
@@ -17,7 +17,7 @@ colors = np.random.uniform(0, 255, size=(len(classes), 3))
 # cap = cv2.VideoCapture(0)
 
 # Video stream
-cap = cv2.VideoCapture("matt.mp4")
+cap = cv2.VideoCapture("test_videos/birds_eye.mov")
 
 starting_time = time.time()
 frame_id = 0
@@ -38,7 +38,7 @@ while True:
 
     # Detecting objects
     blob = cv2.dnn.blobFromImage(
-        frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False
+        frame, 0.00392, (608, 608), (0, 0, 0), True, crop=False
     )
 
     net.setInput(blob)
