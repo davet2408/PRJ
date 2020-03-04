@@ -156,9 +156,8 @@ pip-selfcheck.json
 test_videos/
 test_images/
 
-mapscore
+mapscore/
 
-Results
-yolo_object_detection/results/detection-results
+yolo_object_detection/results/
 
 weights/

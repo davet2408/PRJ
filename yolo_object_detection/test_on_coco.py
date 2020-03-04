@@ -8,15 +8,14 @@ import argparse
 
 # Compatible networks
 NETWORKS = ["yolov3", "yolov3-tiny", "yolov3-tiny-prn"]
-CONFIDENCE_THRESHOLD = 0.25
+CONFIDENCE_THRESHOLD = 0.5
 
 # images_path = "test_images/coco_val_full/images/"
 images_path = "test_images/coco_test/images/"
 
-nn_input_dimensions = 416
+nn_input_dimensions = 608
 
 # List of all images for testing
-# images_list = os.listdir("test_images/coco_test/images")
 images_list = os.listdir(images_path)
 
 #  Command line arguments
@@ -83,12 +82,15 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 
 counter = 1
 
+# Total execution time
+start_time = time.time()
+
 # Run inference on each image
 for n in range(args.samples):
     print(f"Image:  ({counter}/{args.samples})   {images_list[n]}")
 
     # Execution time information
-    start_time = time.time()
+    frame_start_time = time.time()
 
     # Loading image
     img = cv2.imread(images_path + images_list[n])
@@ -157,14 +159,18 @@ for n in range(args.samples):
     # infer_time = f"Inference time: {t / cv2.getTickFrequency()}"
     # print(infer_time)
 
-    total_time = time.time() - start_time
+    frame_end_time = time.time() - frame_start_time
     # Write times to file
-    add_time_info([total_time, infer_time])
+    add_time_info([frame_end_time, infer_time])
 
     counter += 1
 
     # cv2.imshow("Image", img)
     # cv2.waitKey(0)
+
+# Time taken for code to finish
+total_time = time.time() - start_time
+add_time_info([total_time])
 
 # cv2.destroyAllWindows()
 
