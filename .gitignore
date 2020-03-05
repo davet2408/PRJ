@@ -159,5 +159,6 @@ test_images/
 mapscore/
 
 yolo_object_detection/results/
+ssd_object_detection/results/
 
 weights/

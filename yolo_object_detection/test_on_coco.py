@@ -10,8 +10,8 @@ import argparse
 NETWORKS = ["yolov3", "yolov3-tiny", "yolov3-tiny-prn"]
 CONFIDENCE_THRESHOLD = 0.5
 
-# images_path = "test_images/coco_val_full/images/"
-images_path = "test_images/coco_test/images/"
+# images_path = "../test_images/coco_val_full/images/"
+images_path = "../test_images/coco_test/images/"
 
 nn_input_dimensions = 608
 
@@ -21,17 +21,13 @@ images_list = os.listdir(images_path)
 #  Command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-n",
-    "--NN",
-    default="yolov3",
-    help="Chose the NN to use, current options yolov3 and yolov3-tiny",
+    "-n", "--NN", default="yolov3", help="network to use; " + str(NETWORKS),
 )
 parser.add_argument(
-    "-s",
-    "--samples",
-    default=len(images_list),
-    type=int,
-    help="specify the number of images to test on, limit is 500",
+    "-s", "--samples", default=None, type=int, help="number of images to test on",
+)
+parser.add_argument(
+    "-g", "--gpu", default=False, type=bool, help="boolean to toggle the use of gpu"
 )
 
 args = parser.parse_args()
@@ -40,7 +36,7 @@ if args.NN not in NETWORKS:
     print(f"invalid NN '{args.NN}', chose from {str(NETWORKS)}")
     quit()
 
-if args.samples >= len(images_list):
+if args.samples is None or args.samples >= len(images_list):
     print(f"max number of samples is {len(images_list)}")
     args.samples = len(images_list)
 
@@ -73,6 +69,12 @@ def add_time_info(times):
 
 # Load Yolo
 net = cv2.dnn.readNet(f"weights/{args.NN}.weights", f"cfg/{args.NN}.cfg")
+
+# Check for GPU
+if args.gpu:
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
 classes = []
 with open("coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
