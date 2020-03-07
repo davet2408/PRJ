@@ -184,5 +184,7 @@ for n in range(args.samples):
 total_time = time.time() - start_time
 add_time_info([total_time])
 
+print(f"[Time taken] {total_time}")
+
 # cv2.destroyAllWindows()
 
