@@ -125,7 +125,7 @@ COLORS = np.random.uniform(0, 255, size=(len(CLASSES), 3))
 # load our serialized model from disk
 print("[INFO] loading model...")
 # net = cv2.dnn.readNetFromCaffe(args["prototxt"], args["model"])
-net = cv2.dnn.readNet(args["prototxt"], args["model"])
+net = cv2.dnn.readNet("cfg/" + args["prototxt"], "weights/" + args["model"])
 
 # initialize the video stream, allow the cammera sensor to warmup,
 # and initialize the FPS counter

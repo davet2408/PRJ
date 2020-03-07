@@ -8,12 +8,11 @@ import argparse
 
 # Compatible networks
 NETWORKS = ["yolov3", "yolov3-tiny", "yolov3-tiny-prn"]
+INPUT_SIZES = [320, 416, 608]
 CONFIDENCE_THRESHOLD = 0.5
 
 # images_path = "../test_images/coco_val_full/images/"
 images_path = "../test_images/coco_test/images/"
-
-nn_input_dimensions = 608
 
 # List of all images for testing
 images_list = os.listdir(images_path)
@@ -29,6 +28,9 @@ parser.add_argument(
 parser.add_argument(
     "-g", "--gpu", default=False, type=bool, help="boolean to toggle the use of gpu"
 )
+parser.add_argument(
+    "-i", "--input_size", default=608, type=int, help="Network input size"
+)
 
 args = parser.parse_args()
 
@@ -39,6 +41,22 @@ if args.NN not in NETWORKS:
 if args.samples is None or args.samples >= len(images_list):
     print(f"max number of samples is {len(images_list)}")
     args.samples = len(images_list)
+
+if args.input_size in INPUT_SIZES:
+    nn_input_dimensions = args.input_size
+else:
+    print(f"Valid network input sizes: {str(INPUT_SIZES)}")
+
+# Load Yolo
+net = cv2.dnn.readNet(f"weights/{args.NN}.weights", f"cfg/{args.NN}.cfg")
+
+# Check for GPU
+if args.gpu:
+    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+print(f"\n[Loading] {args.NN}")
+print(f"[Input dimensions] {args.input_size} x {args.input_size}\n")
 
 # Directories for results
 detection_results = "results/detection-results"
@@ -66,14 +84,6 @@ def add_time_info(times):
         writer = csv.writer(csvfile)
         writer.writerow(times)
 
-
-# Load Yolo
-net = cv2.dnn.readNet(f"weights/{args.NN}.weights", f"cfg/{args.NN}.cfg")
-
-# Check for GPU
-if args.gpu:
-    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
 classes = []
 with open("coco.names", "r") as f:

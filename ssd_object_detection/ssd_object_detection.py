@@ -99,17 +99,21 @@ classes = [
 
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
-cam = cv2.VideoCapture(0)
-time.sleep(2.0)
+# cam = cv2.VideoCapture(0)
+# time.sleep(2.0)
 
-cvNet = cv2.dnn.readNet("MobileNetSSD_V2.pb", "MobileNetSSD_V2.pbtxt")
+
+cvNet = cv2.dnn.readNet("weights/MobileNetSSD_V2.pb", "cfg/MobileNetSSD_V2.pbtxt")
 
 while True:
 
-    _, img = cam.read()
+    # _, img = cam.read()
+    img = cv2.imread(
+        "../test_images/visDrone/VisDrone2019-DET-val/images/0000022_01251_d_0000007.jpg"
+    )
     rows = img.shape[0]
     cols = img.shape[1]
-    cvNet.setInput(cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False))
+    cvNet.setInput(cv2.dnn.blobFromImage(img, size=(512, 512), swapRB=True, crop=False))
     cvOut = cvNet.forward()
 
     for detection in cvOut[0, 0, :, :]:

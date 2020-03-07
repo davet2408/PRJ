@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 # Load Yolo
-net = cv2.dnn.readNet("yolov3.weights", "yolov3.cfg")
+net = cv2.dnn.readNet("weights/yolov3.weights", "cfg/yolov3.cfg")
 classes = []
 with open("coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
@@ -11,12 +11,14 @@ output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
 
 # Loading image
-img = cv2.imread("room_ser.jpg")
-img = cv2.resize(img, None, fx=0.4, fy=0.4)
+img = cv2.imread(
+    "../test_images/visDrone/VisDrone2019-DET-val/images/0000023_00868_d_0000010.jpg"
+)
+# img = cv2.resize(img, None, fx=0.4, fy=0.4)
 height, width, channels = img.shape
 
 # Detecting objects
-blob = cv2.dnn.blobFromImage(img, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
+blob = cv2.dnn.blobFromImage(img, 0.00392, (800, 800), (0, 0, 0), True, crop=False)
 
 net.setInput(blob)
 outs = net.forward(output_layers)
