@@ -17,6 +17,8 @@ images_path = "../test_images/coco_test/images/"
 # List of all images for testing
 images_list = os.listdir(images_path)
 
+images_list = sorted(images_list, key=lambda x: int(x.replace(".jpg", "")))
+
 #  Command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
