@@ -81,7 +81,7 @@ def add_bb_info(path, line):
 
 def add_time_info(times):
     # Store execution time information
-    times = [round(time, 5) for time in times]
+    # times = [round(time, 5) for time in times]
     with open(time_results, "a", newline="") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerow(times)
@@ -175,7 +175,7 @@ for n in range(args.samples):
 
     frame_end_time = time.time() - frame_start_time
     # Write times to file
-    add_time_info([frame_end_time, infer_time])
+    add_time_info([round(frame_end_time, 5), round(infer_time, 5), images_list[n]])
 
     counter += 1
 
