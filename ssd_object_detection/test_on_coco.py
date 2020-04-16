@@ -192,8 +192,8 @@ for n in range(args.samples):
     open(detection_result_path, "a")
 
     # height, width, channels = img.shape
-    rows = img.shape[0]
-    cols = img.shape[1]
+    height = img.shape[0]
+    width = img.shape[1]
 
     # Detecting objects
     blob = cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False)
@@ -207,10 +207,10 @@ for n in range(args.samples):
         confidence = float(detection[2])
         if confidence > CONFIDENCE_THRESHOLD:
             # Object detected
-            x1 = detection[3] * cols
-            y1 = detection[4] * rows
-            x2 = detection[5] * cols
-            y2 = detection[6] * rows
+            x1 = detection[3] * width
+            y1 = detection[4] * height
+            x2 = detection[5] * width
+            y2 = detection[6] * height
 
             class_name = str(classes[class_id])
             # remove spaces from class names for mAP score
@@ -237,4 +237,3 @@ total_time = time.time() - start_time
 add_time_info([total_time])
 
 # cv2.destroyAllWindows()
-

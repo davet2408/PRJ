@@ -1,68 +1,159 @@
 import cv2
 import numpy as np
+import argparse
+import yolo
+import sys
 
-# Load Yolo
-net = cv2.dnn.readNet("weights/yolov3.weights", "cfg/yolov3.cfg")
-classes = []
-with open("coco.names", "r") as f:
-    classes = [line.strip() for line in f.readlines()]
-layer_names = net.getLayerNames()
-output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+#  Command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-m",
+    "--model",
+    default="yolov3-retrainedv2",
+    help="network to use: " + str(yolo.NETWORKS.keys()),
+)
+parser.add_argument(
+    "--video", default=None, help="Relative path to video file to run yolo on."
+)
+parser.add_argument(
+    "--image",
+    default="../test_images/hard_test_images/9999947_00000_d_0000026.jpg",
+    help="Relative path to image file to run yolo on.",
+)
+parser.add_argument(
+    "-c", "--conf", default=0.2, type=float, help="Set the detection threshold"
+)
+parser.add_argument(
+    "-s", "--NMS", default=0.6, type=float, help="Non Maximum Supression threshold"
+)
+parser.add_argument(
+    "-g", "--gpu", default=False, type=bool, help="boolean to toggle the use of gpu"
+)
+parser.add_argument(
+    "-i",
+    "--input_size",
+    default=608,
+    type=int,
+    help="Network resolution: " + str(yolo.INPUT_SIZES),
+)
+parser.add_argument(
+    "-t", "--text", default=False, type=bool, help="Show prediction text"
+)
+args = parser.parse_args()
+
+
+def image_detection(args, model, classes, output_layers):
+
+    img = cv2.imread(args.image)
+    if img is not None:
+        height, width, channels = img.shape
+
+        blob = yolo.get_blob(img, args.input_size)
+
+        model.setInput(blob)
+        layer_outputs = model.forward(output_layers)
+        # Network prediction information
+        class_ids, confidences, boxes = yolo.get_detections(
+            layer_outputs, width, height, args.conf
+        )
+        # Non-maximal supresion to remove duplicate detections
+        nms_indexes = cv2.dnn.NMSBoxes(boxes, confidences, args.conf, args.NMS)
+        # Place detections on frame
+        yolo.draw_bounding_boxes(
+            class_ids,
+            confidences,
+            boxes,
+            nms_indexes,
+            classes,
+            colors,
+            img,
+            text=args.text,
+        )
+
+        # Display image with predictions.
+        cv2.imshow(f"{args.model} {args.input_size}x{args.input_size} detections", img)
+        cv2.waitKey(0)
+
+    else:
+        print(f"No image found at - {args.image}")
+
+
+def video_detection(args, model, classes, output_layers):
+
+    if args.video == "0":
+        cap = cv2.VideoCapture(0)
+    else:
+        cap = cv2.VideoCapture(args.video)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            print(f"No video found at {args.video}")
+            sys.exit(1)
+
+        height, width, channels = frame.shape
+        # Convert to blob.
+        blob = yolo.get_blob(frame, args.input_size)
+        # Pass the frame through the model.
+        model.setInput(blob)
+        predictions = model.forward(output_layers)
+        # Format and Filter detections.
+        class_ids, confidences, boxes = yolo.get_detections(
+            predictions, width, height, args.conf
+        )
+        # Non-maximal supresion to remove duplicate detections
+        nms_indexes = cv2.dnn.NMSBoxes(boxes, confidences, args.conf, args.NMS)
+        # Place detections on frame
+        yolo.draw_bounding_boxes(
+            class_ids,
+            confidences,
+            boxes,
+            nms_indexes,
+            classes,
+            colors,
+            frame,
+            text=args.text,
+        )
+
+        cv2.imshow("Video Feed", frame)
+
+        key = cv2.waitKey(10) & 0xFF
+        # Exit is 'q' is pressed.
+        if key == ord("q"):
+            cap.release()
+            break
+
+
+# Load YOLO model
+try:
+    model, classes, output_layers = yolo.load_network(args.model, args.input_size)
+except ValueError as err:
+    # Invalid network parameters.
+    print(str(err))
+    sys.exit(1)
+
+# Enable GPU
+if args.gpu:
+    model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+
+# Assign random colours to the classes
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
-
-# Loading image
-img = cv2.imread(
-    "../test_images/visDrone/VisDrone2019-DET-val/images/0000023_00868_d_0000010.jpg"
-)
-# img = cv2.resize(img, None, fx=0.4, fy=0.4)
-height, width, channels = img.shape
-
-# Detecting objects
-blob = cv2.dnn.blobFromImage(img, 0.00392, (800, 800), (0, 0, 0), True, crop=False)
-
-net.setInput(blob)
-outs = net.forward(output_layers)
-
-# Showing informations on the screen
-class_ids = []
-confidences = []
-boxes = []
-for out in outs:
-    for detection in out:
-        scores = detection[5:]
-        class_id = np.argmax(scores)
-        confidence = scores[class_id]
-        if confidence > 0.5:
-            # Object detected
-            center_x = int(detection[0] * width)
-            center_y = int(detection[1] * height)
-            w = int(detection[2] * width)
-            h = int(detection[3] * height)
-
-            # Rectangle coordinates
-            x = int(center_x - w / 2)
-            y = int(center_y - h / 2)
-
-            boxes.append([x, y, w, h])
-            confidences.append(float(confidence))
-            class_ids.append(class_id)
-
-indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.4)
-print(indexes)
-font = cv2.FONT_HERSHEY_PLAIN
-for i in range(len(boxes)):
-    if i in indexes:
-        x, y, w, h = boxes[i]
-        label = str(classes[class_ids[i]])
-        color = colors[i]
-        cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-        cv2.putText(img, label, (x, y + 30), font, 3, color, 3)
+# Specific coloours for some classes.
+colors[0] = [255.0, 0.0, 255.0]  # pink for people
+colors[1] = [255.0, 3.0, 3.0]  # blue for bike
+colors[2] = [3.0, 255.0, 3.0]  # green for car
+# colors[8] = [3.0, 255.0, 255.0]  # yellow for motor bike
 
 
-print(
-    "\nClose by pressing any button\nWindow must be focused to close, dont just click the close button!"
-)
+if args.video is None:
+    img = image_detection(args, model, classes, output_layers)
+    # save image
+    # cv2.imwrite("detection_result.jpg", img)
 
-cv2.imshow("Image", img)
-cv2.waitKey(0)
+else:
+    video_detection(args, model, classes, output_layers)
+
+
 cv2.destroyAllWindows()

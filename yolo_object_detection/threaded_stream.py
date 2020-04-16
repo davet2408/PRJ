@@ -1,153 +1,151 @@
+import cv2
+import yolo
+import numpy as np
+import sys
+import argparse
+import time
 from multiprocessing import Process
 from multiprocessing import Queue
-import numpy as np
-import argparse
-import imutils
-import time
-import cv2
+from video_streaming.GStreamer import GStreamer_server
 
 
-def classify_frame(net, output_layers, inputQueue, outputQueue):
-    # keep looping
+# Command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "-m",
+    "--model",
+    default="yolov3-retrainedv2",
+    help="network to use: " + str(yolo.NETWORKS.keys()),
+)
+parser.add_argument(
+    "-c", "--conf", default=0.3, type=float, help="Set the detection threshold"
+)
+parser.add_argument(
+    "-s", "--NMS", default=0.4, type=float, help="Non Maximum Supression threshold"
+)
+parser.add_argument(
+    "-g", "--gpu", default=False, type=bool, help="boolean to toggle the use of gpu"
+)
+parser.add_argument(
+    "-i",
+    "--input_size",
+    default=608,
+    type=int,
+    help="Network resolution: " + str(yolo.INPUT_SIZES),
+)
+parser.add_argument(
+    "-t", "--text", default=False, type=bool, help="Show prediction text"
+)
+args = parser.parse_args()
+
+
+def run_inference(model, confidence, output_layers, in_q, out_q):
+    """Continually grabs frames from in_q and runs inference on that frame 
+    placing the detection results in the out_q. Encapsulated in this function 
+    so that it can be executed in a separate process.
+
+    Based on code from:
+    https://www.pyimagesearch.com/2017/10/16/raspberry-pi-deep-learning-object
+    -detection-with-opencv/
+    (accessed 17/02/20)
+    """
+    # Run until main process terminated.
     while True:
-        # check to see if there is a frame in our input queue
-        if not inputQueue.empty():
-            # grab the frame from the input queue, resize it, and
-            # construct a blob from it
-            frame = inputQueue.get()
-            # frame = cv2.resize(frame, (416, 416))
-            blob = cv2.dnn.blobFromImage(
-                frame, 0.00392, (416, 416), (0, 0, 0), True, crop=False
-            )
-            # set the blob as input to our deep learning object
-            # detector and obtain the detections
-            net.setInput(blob)
-            detections = net.forward(output_layers)
-            # write the detections to the output queue
-            outputQueue.put(detections)
+        # Check for new frame.
+        if not in_q.empty():
+            # Grab frame from queue, get dimmensions.
+            frame = in_q.get()
+            height, width, channels = frame.shape
+            # Convert to blob.
+            blob = yolo.get_blob(frame, args.input_size)
+            # Pass the frame through the model.
+            model.setInput(blob)
+            predictions = model.forward(output_layers)
+            # Format and Filter detections.
+            detections = yolo.get_detections(predictions, width, height, confidence)
+            # Place detections on output queue.
+            out_q.put(detections)
 
 
-# Load Tiny-Yolo
-net = cv2.dnn.readNet("weights/yolov3-tiny.weights", "cfg/yolov3-tiny.cfg")
+# Load YOLO model
+try:
+    model, classes, output_layers = yolo.load_network(args.model, args.input_size)
+except ValueError as err:
+    # Invalid network parameters.
+    print(str(err))
+    sys.exit(1)
 
-# Load class labels
-classes = []
-with open("coco.names", "r") as f:
-    classes = [line.strip() for line in f.readlines()]
-layer_names = net.getLayerNames()
-output_layers = [layer_names[i[0] - 1] for i in net.getUnconnectedOutLayers()]
+# Enable GPU
+if args.gpu:
+    model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+
+
 # Assign random colours to the classes
 colors = np.random.uniform(0, 255, size=(len(classes), 3))
+# Specific coloours for some classes.
+colors[0] = [255.0, 0.0, 255.0]  # pink for people
+colors[1] = [255.0, 3.0, 3.0]  # blue for bike
+colors[2] = [3.0, 255.0, 3.0]  # green for car
 
 # Timing utilities for inference
-starting_time = time.time()
-frame_id = 0
-
 times = []
 
-# Input queue to collect frames from the stream
-inputQueue = Queue(maxsize=1)
-# Output queue to collect detection results
-outputQueue = Queue(maxsize=1)
+# Single element multiprocess queues for infernce.
+in_q = Queue(maxsize=1)
+out_q = Queue(maxsize=1)
+
 detections = None
 
-
-# Construct child process
-p = Process(target=classify_frame, args=(net, output_layers, inputQueue, outputQueue,))
+# Start the inference (child) process.
+p = Process(target=run_inference, args=(model, args.conf, output_layers, in_q, out_q,))
+# Allow main thread to exit even if process is not finished.
 p.daemon = True
 p.start()
 
-# GStreamer pipeline for udp stream
-pipe = 'udpsrc port=7000 caps = "application/x-rtp, media=(string)video, clock-rate=(int)90000, encoding-name=(string)H264, payload=(int)96" ! rtph264depay ! decodebin ! videoconvert ! appsink sync=false'
-cap = cv2.VideoCapture(pipe, cv2.CAP_GSTREAMER,)
+# cap = cv2.VideoCapture(0)
+cap = GStreamer_server.VideoCapture()
 
+cv2.namedWindow("Video Feed", cv2.WINDOW_AUTOSIZE)
 
 while True:
-
-    cap.grab()
-    cap.grab()
-    cap.grab()
 
     ret, frame = cap.read()
     if not ret:
         print("empty frame")
-        input("wait")
         continue
 
-    frame_time = time.time()
-    frame_id += 1
-
-    height, width, channels = frame.shape
-
-    # If net is waiting for input
-    if inputQueue.empty():
-        inputQueue.put(frame)
-    # If there is an outstanding detection to be shown
-    if not outputQueue.empty():
-        detections = outputQueue.get()
+    # Model waiting for next frame.
+    if in_q.empty():
+        in_q.put(frame)
+    # Detection ready to be displayed.
+    if not out_q.empty():
+        detections = out_q.get()
 
     if detections is not None:
-        class_ids = []
-        confidences = []
-        boxes = []
-        for out in detections:
-            for detection in out:
-                scores = detection[5:]
-                class_id = np.argmax(scores)
-                confidence = scores[class_id]
-                if confidence > 0.5:
-                    # Object detected
-                    center_x = int(detection[0] * width)
-                    center_y = int(detection[1] * height)
-                    w = int(detection[2] * width)
-                    h = int(detection[3] * height)
+        start_time = time.time()
 
-                    # Rectangle coordinates
-                    x = int(center_x - w / 2)
-                    y = int(center_y - h / 2)
+        class_ids, confidences, boxes = detections
+        # Non-maximal supresion to remove duplicate detections
+        nms_indexes = cv2.dnn.NMSBoxes(boxes, confidences, args.conf, args.NMS)
+        # Place detections on frame
+        yolo.draw_bounding_boxes(
+            class_ids,
+            confidences,
+            boxes,
+            nms_indexes,
+            classes,
+            colors,
+            frame,
+            text=args.text,
+        )
 
-                    boxes.append([x, y, w, h])
-                    confidences.append(float(confidence))
-                    class_ids.append(class_id)
+    cv2.imshow("Video Feed", frame)
 
-        indexes = cv2.dnn.NMSBoxes(boxes, confidences, 0.5, 0.5)
-        font = cv2.FONT_HERSHEY_PLAIN
-        for i in range(len(boxes)):
-            if i in indexes:
-                x, y, w, h = boxes[i]
-                label = str(classes[class_ids[i]])
-                confidence = confidences[i]
-                color = colors[class_ids[i]]
-                cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
-                cv2.putText(
-                    frame,
-                    label + " " + str(round(confidence, 2)),
-                    (x, y + 30),
-                    font,
-                    1,
-                    color,
-                    3,
-                )
-
-        # elapsed_time = time.time() - starting_time
-        # infer_time = time.time() - frame_time
-        # times.append(infer_time)
-
-        cv2.imshow("Image", frame)
-
-    # min_time = min(times)
-    # max_time = max(times)
-    # average_time = sum(times) / frame_id
-
-    # print(
-    #     f"min time = {min_time} \nmax_time = {max_time} \naverage = {average_time}"
-    # )
-
-    key = cv2.waitKey(1) & 0xFF
-    # if the `q` key was pressed, break from the loop
+    key = cv2.waitKey(10) & 0xFF
+    # Exit is 'q' is pressed.
     if key == ord("q"):
+        cv2.destroyAllWindows()
         break
 
-
-cap.release()
 cv2.destroyAllWindows()
