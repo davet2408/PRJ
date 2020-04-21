@@ -1,129 +1,39 @@
+"""
+This module provides code to run SSD Object Detection on the given folder
+of images and save the prediction in voc format to results/detection-results.
+Timing information for both code execution and inference time is also 
+recorded to a CSV file "results/time-results.csv".
+
+detection-results can then be passed to the mapscore library to generate a
+mAP score for these detections against the ground truth values for the data.
+
+
+Author: David Temple
+Date: 02/03/2020
+"""
+# OpenCV module installed from https://github.com/opencv/opencv
+import cv2
+
+# numpy module installed via pip https://numpy.org
+import numpy as np
+
+# Python standard library modules
+import argparse
 import os
 import csv
 import shutil
 import time
-import cv2
-import numpy as np
-import argparse
-
-# Compatible networks
-NETWORKS = {
-    "MobileNetSSD_V2.pb": "MobileNetSSD_V2.pbtxt",
-    "SSD_512.caffemodel": "SSD_512.prototxt",
-}
-CONFIDENCE_THRESHOLD = 0.5
-classes = [
-    "background",
-    "person",
-    "bicycle",
-    "car",
-    "motorcycle",
-    "airplane",
-    "bus",
-    "train",
-    "truck",
-    "boat",
-    "traffic light",
-    "fire hydrant",
-    "unknown",
-    "stop sign",
-    "parking meter",
-    "bench",
-    "bird",
-    "cat",
-    "dog",
-    "horse",
-    "sheep",
-    "cow",
-    "elephant",
-    "bear",
-    "zebra",
-    "giraffe",
-    "unknown",
-    "backpack",
-    "umbrella",
-    "unknown",
-    "unknown",
-    "handbag",
-    "tie",
-    "suitcase",
-    "frisbee",
-    "skis",
-    "snowboard",
-    "sports ball",
-    "kite",
-    "baseball bat",
-    "baseball glove",
-    "skateboard",
-    "surfboard",
-    "tennis racket",
-    "bottle",
-    "unknown",
-    "wine glass",
-    "cup",
-    "fork",
-    "knife",
-    "spoon",
-    "bowl",
-    "banana",
-    "apple",
-    "sandwich",
-    "orange",
-    "broccoli",
-    "carrot",
-    "hot dog",
-    "pizza",
-    "donut",
-    "cake",
-    "chair",
-    "couch",
-    "potted plant",
-    "bed",
-    "unknown",
-    "dining table",
-    "unknown",
-    "unknown",
-    "toilet",
-    "unknown",
-    "tv",
-    "laptop",
-    "mouse",
-    "remote",
-    "keyboard",
-    "cell phone",
-    "microwave",
-    "oven",
-    "toaster",
-    "sink",
-    "refrigerator",
-    "unknown",
-    "book",
-    "clock",
-    "vase",
-    "scissors",
-    "teddy bear",
-    "hair drier",
-    "toothbrush",
-]
-# Load class labels for relavant file.
-classes = []
-with open("coco.names", "r") as f:
-    classes = [line.strip() for line in f.readlines()]
-
-images_path = "../test_images/coco_test/images/"
-
-nn_input_dimensions = 300
-
-# List of all images for testing
-images_list = os.listdir(images_path)
-
-# Order images in ascending order
-images_list = sorted(images_list, key=lambda x: int(x.replace(".jpg", "")))
 
 #  Command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-n", "--NN", default="MobileNetSSD_V2.pb", help="network to use; " + str(NETWORKS),
+    "-c", "--conf", default=0.5, type=float, help="Set the detection threshold"
+)
+parser.add_argument(
+    "-d",
+    "--data",
+    default="../test_images/coco_test/images/",
+    help="relative path of dataset to use",
 )
 parser.add_argument(
     "-s", "--samples", default=None, type=int, help="number of images to test on",
@@ -131,12 +41,28 @@ parser.add_argument(
 parser.add_argument(
     "-g", "--gpu", default=False, type=bool, help="boolean to toggle the use of gpu"
 )
-
 args = parser.parse_args()
 
-if args.NN not in NETWORKS:
-    print(f"invalid NN '{args.NN}', chose from {str(NETWORKS)}")
-    quit()
+# Compatible networks
+MODEL = "MobileNetSSD_V2.pb"
+INPUT_DIMENSIONS = 300
+
+# Load class labels for relavant file.
+classes = []
+with open("coco.names", "r") as f:
+    classes = [line.strip() for line in f.readlines()]
+
+# Select dataset
+images_path = args.data if args.data[-1] == "/" else args.data + "/"
+# List of all images for testing
+images_list = os.listdir(images_path)
+# Order images in ascending order if possible
+images_list = sorted(
+    images_list,
+    key=lambda x: int(x.replace(".jpg", ""))
+    if x.replace(".jpg", "").isnumeric()
+    else 1,
+)
 
 if args.samples is None or args.samples >= len(images_list):
     print(f"max number of samples is {len(images_list)}")
@@ -170,15 +96,17 @@ def add_time_info(times):
 
 
 # Load SSD
-net = cv2.dnn.readNet(f"weights/{args.NN}", f"cfg/{NETWORKS[args.NN]}")
+model = cv2.dnn.readNet(f"weights/{MODEL}", f"cfg/MobileNetSSD_V2.pbtxt")
 
 # Check for GPU
 if args.gpu:
-    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+    model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+    model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
-print(f"\n[Loading] {args.NN}")
-print(f"[Input dimensions] {nn_input_dimensions} x {nn_input_dimensions}\n")
+
+print(f"\n[Data] {args.data}\n")
+print(f"\n[Loading] {MODEL}")
+print(f"[Input dimensions] {INPUT_DIMENSIONS} x {INPUT_DIMENSIONS}\n")
 
 counter = 1
 
@@ -203,20 +131,24 @@ for n in range(args.samples):
     height, width, channels = img.shape
 
     # Format image
-    blob = cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False)
+    blob = cv2.dnn.blobFromImage(
+        img, size=(INPUT_DIMENSIONS, INPUT_DIMENSIONS), swapRB=True, crop=False
+    )
 
     # Run inference
-    net.setInput(blob)
+    model.setInput(blob)
     start_inf = time.time()
-    outs = net.forward()
+    outs = model.forward()
     end_inf = time.time()
 
     # Network output information
+    # Based on the code from:
+    # https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
+    # (accessed 12/01/20)
     for detection in outs[0, 0, :, :]:
-        scores = detection[5:]
         class_id = int(detection[1])
         confidence = float(detection[2])
-        if confidence > CONFIDENCE_THRESHOLD:
+        if confidence > args.conf:
             # Object detected
             x1 = detection[3] * width
             y1 = detection[4] * height

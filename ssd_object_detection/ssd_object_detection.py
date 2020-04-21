@@ -1,154 +1,158 @@
+"""
+This program applies Object Detection to the video or images provided to it
+allowing the testing of SSD object detectors. Parameters can be altered to 
+try and get the best possible performance. 
+
+There are a limited number of ways to interpret the SSD output from OpenCV
+therefore, these sources have been considered and used in the development of 
+this file.
+
+Sections of this code is based on implimentations from these sources:
+https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
+(accessed 12/01/20)
+
+https://www.pyimagesearch.com/2017/09/11/object-detection-with-deep-learning-
+and-opencv/
+(accessed 20/01/20)
+
+https://medium.com/@franky07724_57962/exploring-opencvs-deep-learning-object-
+detection-library-e51fe7c82246
+(accessed 12/01/20)
+
+Author: David Temple
+Date: 02/03/2020
+"""
+# OpenCV module installed from https://github.com/opencv/opencv
 import cv2
+
+# numpy module installed via pip https://numpy.org
 import numpy as np
+
+# Python standard library modules
+import argparse
+import sys
 import time
 
+#  Command line arguments
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--video", default=None, help="Relative path to video file to run yolo on."
+)
+parser.add_argument(
+    "--image",
+    default="../test_images/coco_test/images/1.jpg",
+    help="Relative path to image file to run SSD on.",
+)
+parser.add_argument(
+    "-c", "--conf", default=0.5, type=float, help="Set the detection threshold"
+)
+parser.add_argument(
+    "-g", "--gpu", default=False, type=bool, help="boolean to toggle the use of gpu"
+)
+parser.add_argument(
+    "-t", "--text", default=True, type=bool, help="Show prediction text"
+)
+args = parser.parse_args()
 
-classes = [
-    "background",
-    "person",
-    "bicycle",
-    "car",
-    "motorcycle",
-    "airplane",
-    "bus",
-    "train",
-    "truck",
-    "boat",
-    "traffic light",
-    "fire hydrant",
-    "unknown",
-    "stop sign",
-    "parking meter",
-    "bench",
-    "bird",
-    "cat",
-    "dog",
-    "horse",
-    "sheep",
-    "cow",
-    "elephant",
-    "bear",
-    "zebra",
-    "giraffe",
-    "unknown",
-    "backpack",
-    "umbrella",
-    "unknown",
-    "unknown",
-    "handbag",
-    "tie",
-    "suitcase",
-    "frisbee",
-    "skis",
-    "snowboard",
-    "sports ball",
-    "kite",
-    "baseball bat",
-    "baseball glove",
-    "skateboard",
-    "surfboard",
-    "tennis racket",
-    "bottle",
-    "unknown",
-    "wine glass",
-    "cup",
-    "fork",
-    "knife",
-    "spoon",
-    "bowl",
-    "banana",
-    "apple",
-    "sandwich",
-    "orange",
-    "broccoli",
-    "carrot",
-    "hot dog",
-    "pizza",
-    "donut",
-    "cake",
-    "chair",
-    "couch",
-    "potted plant",
-    "bed",
-    "unknown",
-    "dining table",
-    "unknown",
-    "unknown",
-    "toilet",
-    "unknown",
-    "tv",
-    "laptop",
-    "mouse",
-    "remote",
-    "keyboard",
-    "cell phone",
-    "microwave",
-    "oven",
-    "toaster",
-    "sink",
-    "refrigerator",
-    "unknown",
-    "book",
-    "clock",
-    "vase",
-    "scissors",
-    "teddy bear",
-    "hair drier",
-    "toothbrush",
-]
+
+def run_infernce(frame, args, model, classes):
+    """Runs Object Detection on the given frame. Adds bounding box predictions
+    to the frame with the class colours provided stating confidence score.
+    Low confidence predictions are removed.
+
+    Function based on the code from:
+    https://github.com/opencv/opencv/wiki/TensorFlow-Object-Detection-API
+    (accessed 12/01/20)
+    """
+
+    height, width, channels = frame.shape
+
+    # Format image
+    blob = cv2.dnn.blobFromImage(
+        frame, size=(INPUT_DIMENSIONS, INPUT_DIMENSIONS), swapRB=True, crop=False
+    )
+
+    # Run inference
+    model.setInput(blob)
+    start_inf = time.time()
+    outs = model.forward()
+    end_inf = time.time()
+
+    # Network output information
+    for detection in outs[0, 0, :, :]:
+        class_id = int(detection[1])
+        confidence = float(detection[2])
+        if confidence > args.conf:
+            # Object detected
+            x1 = detection[3] * width
+            y1 = detection[4] * height
+            x2 = detection[5] * width
+            y2 = detection[6] * height
+
+            label = str(classes[class_id])
+            colour = colours[class_id]
+            # Draw bounding boxes
+            cv2.rectangle(frame, (int(x1), int(y1)), (int(x2), int(y2)), colour, 2)
+            cv2.putText(
+                frame,
+                f"{label} {confidence:.2f}",
+                (int(x1), int(y1) - 3),
+                cv2.FONT_HERSHEY_PLAIN,
+                1,
+                colour,
+                thickness=2,
+            )
+
+
+INPUT_DIMENSIONS = 300
+MODEL = "MobileNetSSD_V2"
+
+# Load class labels for relavant file.
+classes = []
+with open("coco.names", "r") as f:
+    classes = [line.strip() for line in f.readlines()]
 
 colours = np.random.uniform(0, 255, size=(len(classes), 3))
 
-# cam = cv2.VideoCapture(0)
-# time.sleep(2.0)
+model = cv2.dnn.readNet(f"weights/{MODEL}.pb", f"cfg/{MODEL}.pbtxt")
 
 
-cvNet = cv2.dnn.readNet("weights/MobileNetSSD_V2.pb", "cfg/MobileNetSSD_V2.pbtxt")
+# Video detection.
+if args.video:
+    # Webcam
+    if args.video == "0":
+        cap = cv2.VideoCapture(0)
+    # Video file
+    else:
+        cap = cv2.VideoCapture(args.video)
 
-while True:
+    while True:
 
-    # _, img = cam.read()
-    img = cv2.imread(
-        "../test_images/visDrone/VisDrone2019-DET-val/images/0000022_01251_d_0000007.jpg"
-    )
-    rows = img.shape[0]
-    cols = img.shape[1]
-    cvNet.setInput(cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False))
-    cvOut = cvNet.forward()
+        ret, frame = cap.read()
+        if not ret:
+            print(f"No video found at {args.video}")
+            sys.exit(1)
 
-    for detection in cvOut[0, 0, :, :]:
-        confidence_score = float(detection[2])
-        if confidence_score > 0.3:
-            left = detection[3] * cols
-            top = detection[4] * rows
-            right = detection[5] * cols
-            bottom = detection[6] * rows
-            cv2.rectangle(
-                img,
-                (int(left), int(top)),
-                (int(right), int(bottom)),
-                (23, 230, 210),
-                thickness=2,
-            )
-            class_id = int(detection[1])  # prediction class index.
+        # Run Object Detection on the frame
+        run_infernce(frame, args, model, classes)
 
-            # draw the prediction on the frame
-            label = "{}: {:.2f}%".format(classes[class_id], confidence_score * 100)
-            y = top - 15 if top - 15 > 15 else top + 15
-            cv2.putText(
-                img,
-                label,
-                (int(left), int(y)),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.5,
-                colours[class_id],
-                2,
-            )
+        # show the output frame
+        cv2.imshow("SSDMobileNetv2 detections", frame)
+        key = cv2.waitKey(1) & 0xFF
 
-    # show the output frame
-    cv2.imshow("Frame", img)
-    key = cv2.waitKey(1) & 0xFF
+        # Exit if 'q' is pressed.
+        if key == ord("q"):
+            cap.release()
+            break
 
-    # if the `q` key was pressed, break from the loop
-    if key == ord("q"):
-        break
+# Image file.
+else:
+    # Read in image.
+    img = cv2.imread(args.image)
+    if img is not None:
+        # Run Object Detection on the frame
+        run_infernce(img, args, model, classes)
+        # Display predictions
+        cv2.imshow("SSDMobileNetv2 detections", img)
+        # Quit on keypress
+        key = cv2.waitKey(0)

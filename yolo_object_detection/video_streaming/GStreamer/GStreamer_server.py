@@ -7,12 +7,19 @@ If run as main then FPS and other information can be preinted.
 Author: David Temple
 Date: 27/03/2020
 """
+# numpy module installed via pip https://numpy.org
+import numpy as np
+
+# OpenCV module installed from https://github.com/opencv/opencv
+import cv2
+
+# Python standard library modules
 import queue
 import threading
-import numpy as np
-import cv2
-from imutils.video import FPS
 import time
+
+# imutils installed via pip https://github.com/jrosebr1/imutils
+from imutils.video import FPS
 
 
 class VideoCapture:
@@ -27,9 +34,9 @@ class VideoCapture:
     def __init__(self, src="gstreamer"):
         self.cap = self._video_source(src)
         # Buffer to hold most recent frame
-        self.buffer = queue.Queue()
+        self._buffer = queue.Queue()
         # Stopping condition
-        self.done = False
+        self._stop = False
         thread = threading.Thread(target=self._frame_reader)
         # Causes thread to die when calling thread does
         thread.daemon = True
@@ -39,18 +46,18 @@ class VideoCapture:
         """Only keep the most recent frame, read constantly."""
         while True:
             # Check if still going
-            if self.done:
+            if self._stop:
                 self.cap.release()
                 return
 
             (ret, frame) = self.cap.read()
-            if not self.buffer.empty():
+            if not self._buffer.empty():
                 # Try to discard the old frame and return val.
                 try:
-                    self.buffer.get(False)
+                    self._buffer.get(False)
                 except queue.Empty:
                     pass
-            self.buffer.put((ret, frame))
+            self._buffer.put((ret, frame))
 
     def _gstreamer(self):
         """Initialize GStreamer capture"""
@@ -75,11 +82,11 @@ class VideoCapture:
 
     def read(self):
         """Get the most recent frame"""
-        return self.buffer.get()
+        return self._buffer.get()
 
     def stop(self):
         """Tell the video capture to stop"""
-        self.done = True
+        self._stop = True
 
 
 def receive():

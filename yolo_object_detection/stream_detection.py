@@ -1,7 +1,23 @@
+"""
+This program provides Object Detection to a video feed utilising threads to 
+try and enhance performance. 
+
+By default the program will execute with the optimal settings for Object 
+Detection from a GStreamer stream assumed to be from a drones perspective. 
+The command line arguments can be used to adjust performance and even switch 
+to a webcame view for testing.
+
+
+Author: David Temple
+Date: 02/03/2020
+"""
+# OpenCV module installed from https://github.com/opencv/opencv
 import cv2
+
+# numpy module installed via pip https://numpy.org
 import numpy as np
 
-# Python standard modules
+# Python standard library modules
 import sys
 import argparse
 import time
@@ -15,7 +31,7 @@ import yolo
 from video_streaming.GStreamer import GStreamer_server
 
 
-# Command line arguments
+#### Command line arguments ####
 parser = argparse.ArgumentParser()
 parser.add_argument(
     "-m",
@@ -24,7 +40,7 @@ parser.add_argument(
     help="network to use: " + str(yolo.NETWORKS.keys()),
 )
 parser.add_argument(
-    "-c", "--conf", default=0.3, type=float, help="Set the detection threshold"
+    "-c", "--conf", default=0.1, type=float, help="Set the detection threshold"
 )
 parser.add_argument(
     "-s", "--NMS", default=0.4, type=float, help="Non Maximum Supression threshold"
@@ -40,7 +56,14 @@ parser.add_argument(
     help="Network resolution: " + str(yolo.INPUT_SIZES),
 )
 parser.add_argument(
-    "-t", "--text", default=False, type=bool, help="Show prediction text"
+    "-t", "--text", default=False, type=bool, help="boolean to toggle prediction text"
+)
+parser.add_argument(
+    "-w",
+    "--webcam",
+    default=False,
+    type=bool,
+    help="boolean to toggle webcam as input stream",
 )
 args = parser.parse_args()
 
@@ -76,7 +99,8 @@ def run_inference(model, confidence, output_layers, in_q, out_q, inference_times
             # Place detections on output queue.
             out_q.put(detections)
             # Add timing info.
-            inference_times.append(time.time() - inference_start_time)
+            inference_time = time.time() - inference_start_time
+            inference_times.append(inference_time)
 
 
 def add_time_info(times):
@@ -85,6 +109,17 @@ def add_time_info(times):
         writer = csv.writer(csvfile)
         writer.writerow(("loop time", "inference time"))
         writer.writerows(times)
+
+
+def generate_colours(size):
+    """Generate a set of random colours and assign some shared class colours."""
+    colours = np.random.uniform(0, 255, size=(size, 3))
+    # Specific coloours for some classes shared between all models.
+    colours[0] = [255.0, 0.0, 255.0]  # pink for people
+    colours[1] = [255.0, 3.0, 3.0]  # blue for bike
+    colours[2] = [3.0, 255.0, 3.0]  # green for car
+
+    return colours
 
 
 # Load YOLO model
@@ -98,18 +133,22 @@ except ValueError as err:
 # Enable GPU
 if args.gpu:
     model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-    model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-    # model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
+    # model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+    model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
 
+# Video capture object for retriving frames.
+if args.webcam:
+    cap = GStreamer_server.VideoCapture(0)
+else:
+    cap = GStreamer_server.VideoCapture()
+    # cap = cv2.VideoCapture(0)  # can be used for video files.
 
 # Assign random colours to the classes
-colours = np.random.uniform(0, 255, size=(len(classes), 3))
-# Specific coloours for some classes.
-colours[0] = [255.0, 0.0, 255.0]  # pink for people
-colours[1] = [255.0, 3.0, 3.0]  # blue for bike
-colours[2] = [3.0, 255.0, 3.0]  # green for car
+colours = generate_colours(len(classes))
 
+# Timing utilities.
 frame_times = []
+# Process sharable list.
 manger = multiprocessing.Manager()
 inference_times = manger.list()
 
@@ -127,12 +166,6 @@ detection_process = multiprocessing.Process(
 # Allow main thread to exit even if detection_process is not finished.
 detection_process.daemon = True
 detection_process.start()
-
-# Video capture object for retriving frames.
-# cap = GStreamer_server.VideoCapture(0)
-# cap = GStreamer_server.VideoCapture()
-
-cap = cv2.VideoCapture(0)
 
 # Create a resizable window to display detections.
 cv2.namedWindow("Video Feed", cv2.WINDOW_AUTOSIZE)
@@ -179,25 +212,29 @@ while True:
             text=args.text,
         )
 
-    # Add loop time
-    frame_times.append(time.time() - frame_start_time)
-
+    # Show the frame with detections.
     cv2.imshow("Video Feed", frame)
 
-    key = cv2.waitKey(1) & 0xFF
-    # Exit is 'q' is pressed.
+    # Add loop time
+    loop_time = time.time() - frame_start_time
+    frame_times.append(loop_time)
+
+    # Set 100 fps max.
+    key = cv2.waitKey(10) & 0xFF
+    # Exit if 'q' is pressed.
     if key == ord("q"):
         cv2.destroyAllWindows()
         break
 
+# Write execution time information to CSV file
 times = zip_longest(frame_times, inference_times, fillvalue="-")
 add_time_info(times)
 
-
+# Clean up resources
 cv2.destroyAllWindows()
 cv2.waitKey(1)
 if not in_q.empty():
     in_q.get(False)
-# cap.stop()
-cap.release()
+cap.stop()
+# cap.release() # if using video file
 sys.exit()

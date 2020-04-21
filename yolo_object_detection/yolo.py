@@ -3,8 +3,8 @@ This module provides an abstractions of the main functions required to run YOLO
 Object detection models with OpenCV. This has been developed to help reduce 
 repitition of code and can be imported by other modules in this directory.
 
-There is only a limited number of ways to interpret the yolo output from OpenCV
-so therefore many sources have been considered and used in the development of 
+There are a limited number of ways to interpret the yolo output from OpenCV
+therefore, these sources have been considered and used in the development of 
 this module.
 
 Sections of this code is based on implimentations from these sources:
@@ -22,7 +22,10 @@ Author: David Temple
 Date: 02/03/2020
 """
 
+# OpenCV module installed from https://github.com/opencv/opencv
 import cv2
+
+# numpy module installed via pip https://numpy.org
 import numpy as np
 
 # List of valid networks and the detection classes.
@@ -66,7 +69,7 @@ def load_network(network, size):
 
         # Load class labels for relavant file.
         classes = []
-        with open(f"{NETWORKS[network]}.names", "r") as f:
+        with open(f"names/{NETWORKS[network]}.names", "r") as f:
             classes = [line.strip() for line in f.readlines()]
 
         layer_names = net.getLayerNames()

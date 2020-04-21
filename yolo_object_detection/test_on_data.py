@@ -11,15 +11,22 @@ mAP score for these detections against the ground truth values for the data.
 Author: David Temple
 Date: 02/03/2020
 """
+# OpenCV module installed from https://github.com/opencv/opencv
+import cv2
+
+# numpy module installed via pip https://numpy.org
+import numpy as np
+
+# Python standard library modules
 import os
 import csv
 import shutil
 import time
-import cv2
-import numpy as np
 import argparse
-import yolo
 import sys
+
+# Hand made modules
+import yolo
 
 
 #  Command line arguments
@@ -127,7 +134,7 @@ for test_image in images_list:
     # Execution time information
     frame_start_time = time.time()
 
-    # Loading image
+    # Load image
     img = cv2.imread(images_path + test_image)
 
     # Make result file for this image with the same name

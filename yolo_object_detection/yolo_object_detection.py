@@ -1,8 +1,24 @@
+"""
+This program applies Object Detection to the video or images provided to it
+allowing the testing of yolo object detectors. Parameters can be altered to 
+try and get the best possible performance. 
+
+
+Author: David Temple
+Date: 02/03/2020
+"""
+# OpenCV module installed from https://github.com/opencv/opencv
 import cv2
+
+# numpy module installed via pip https://numpy.org
 import numpy as np
+
+# Python standard library modules
 import argparse
-import yolo
 import sys
+
+# Hand made modules
+import yolo
 
 #  Command line arguments
 parser = argparse.ArgumentParser()
@@ -37,7 +53,7 @@ parser.add_argument(
     help="Network resolution: " + str(yolo.INPUT_SIZES),
 )
 parser.add_argument(
-    "-t", "--text", default=False, type=bool, help="Show prediction text"
+    "-t", "--text", default=True, type=bool, help="Show prediction text"
 )
 args = parser.parse_args()
 
@@ -115,13 +131,26 @@ def video_detection(args, model, classes, output_layers):
             text=args.text,
         )
 
-        cv2.imshow("Video Feed", frame)
+        cv2.imshow(
+            f"{args.model} {args.input_size}x{args.input_size} detections", frame
+        )
 
         key = cv2.waitKey(10) & 0xFF
-        # Exit is 'q' is pressed.
+        # Exit if 'q' is pressed.
         if key == ord("q"):
             cap.release()
             break
+
+
+def generate_colours(size):
+    """Generate a set of random colours and assign some shared class colours."""
+    colours = np.random.uniform(0, 255, size=(size, 3))
+    # Specific coloours for some classes shared between all models.
+    colours[0] = [255.0, 0.0, 255.0]  # pink for people
+    colours[1] = [255.0, 3.0, 3.0]  # blue for bike
+    colours[2] = [3.0, 255.0, 3.0]  # green for car
+
+    return colours
 
 
 # Load YOLO model
@@ -139,12 +168,7 @@ if args.gpu:
 
 
 # Assign random colours to the classes
-colours = np.random.uniform(0, 255, size=(len(classes), 3))
-# Specific coloours for some classes.
-colours[0] = [255.0, 0.0, 255.0]  # pink for people
-colours[1] = [255.0, 3.0, 3.0]  # blue for bike
-colours[2] = [3.0, 255.0, 3.0]  # green for car
-# colours[8] = [3.0, 255.0, 255.0]  # yellow for motor bike
+colours = generate_colours(len(classes))
 
 
 if args.video is None:
