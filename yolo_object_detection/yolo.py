@@ -153,7 +153,7 @@ def draw_bounding_boxes(
     bounding_boxes,
     indexes,
     classes,
-    colors,
+    colours,
     frame,
     text=True,
 ):
@@ -172,7 +172,7 @@ def draw_bounding_boxes(
         bounding_boxes {list[int,int,int,int]} -- List of bounding boxes to be filtered.
         indexes {[int]} -- Indexes of boxes that are left after NMS.
         classes {[str]} -- list of classes that can be detected.
-        colors {[(int,int,int)]} -- List of colours to use for different classes.
+        colours {[(int,int,int)]} -- List of colours to use for different classes.
         frame {[ndarry]} -- The frame to add predictions to.
 
     Keyword Arguments:
@@ -188,8 +188,8 @@ def draw_bounding_boxes(
             # Draw bounding box
             x, y, w, h = bounding_boxes[box_idx]
             label = classes[class_ids[box_idx]]
-            color = colors[class_ids[box_idx]]
-            cv2.rectangle(frame, (x, y), (x + w, y + h), color, line_thickness)
+            colour = colours[class_ids[box_idx]]
+            cv2.rectangle(frame, (x, y), (x + w, y + h), colour, line_thickness)
             # Add text
             if text:
                 confidence = confidence_scores[box_idx]
@@ -199,6 +199,6 @@ def draw_bounding_boxes(
                     (x, y - 3),
                     font,
                     font_size,
-                    color,
+                    colour,
                     line_thickness,
                 )

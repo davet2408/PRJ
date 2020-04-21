@@ -97,7 +97,7 @@ classes = [
     "toothbrush",
 ]
 
-colors = np.random.uniform(0, 255, size=(len(classes), 3))
+colours = np.random.uniform(0, 255, size=(len(classes), 3))
 
 # cam = cv2.VideoCapture(0)
 # time.sleep(2.0)
@@ -113,12 +113,12 @@ while True:
     )
     rows = img.shape[0]
     cols = img.shape[1]
-    cvNet.setInput(cv2.dnn.blobFromImage(img, size=(512, 512), swapRB=True, crop=False))
+    cvNet.setInput(cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False))
     cvOut = cvNet.forward()
 
     for detection in cvOut[0, 0, :, :]:
-        score = float(detection[2])
-        if score > 0.3:
+        confidence_score = float(detection[2])
+        if confidence_score > 0.3:
             left = detection[3] * cols
             top = detection[4] * rows
             right = detection[5] * cols
@@ -130,10 +130,10 @@ while True:
                 (23, 230, 210),
                 thickness=2,
             )
-            idx = int(detection[1])  # prediction class index.
+            class_id = int(detection[1])  # prediction class index.
 
             # draw the prediction on the frame
-            label = "{}: {:.2f}%".format(classes[idx], score * 100)
+            label = "{}: {:.2f}%".format(classes[class_id], confidence_score * 100)
             y = top - 15 if top - 15 > 15 else top + 15
             cv2.putText(
                 img,
@@ -141,7 +141,7 @@ while True:
                 (int(left), int(y)),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.5,
-                colors[idx],
+                colours[class_id],
                 2,
             )
 

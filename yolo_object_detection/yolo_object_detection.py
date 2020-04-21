@@ -65,7 +65,7 @@ def image_detection(args, model, classes, output_layers):
             boxes,
             nms_indexes,
             classes,
-            colors,
+            colours,
             img,
             text=args.text,
         )
@@ -110,7 +110,7 @@ def video_detection(args, model, classes, output_layers):
             boxes,
             nms_indexes,
             classes,
-            colors,
+            colours,
             frame,
             text=args.text,
         )
@@ -139,12 +139,12 @@ if args.gpu:
 
 
 # Assign random colours to the classes
-colors = np.random.uniform(0, 255, size=(len(classes), 3))
+colours = np.random.uniform(0, 255, size=(len(classes), 3))
 # Specific coloours for some classes.
-colors[0] = [255.0, 0.0, 255.0]  # pink for people
-colors[1] = [255.0, 3.0, 3.0]  # blue for bike
-colors[2] = [3.0, 255.0, 3.0]  # green for car
-# colors[8] = [3.0, 255.0, 255.0]  # yellow for motor bike
+colours[0] = [255.0, 0.0, 255.0]  # pink for people
+colours[1] = [255.0, 3.0, 3.0]  # blue for bike
+colours[2] = [3.0, 255.0, 3.0]  # green for car
+# colours[8] = [3.0, 255.0, 255.0]  # yellow for motor bike
 
 
 if args.video is None:

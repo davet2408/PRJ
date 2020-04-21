@@ -28,6 +28,8 @@ class VideoCapture:
         self.cap = self._video_source(src)
         # Buffer to hold most recent frame
         self.buffer = queue.Queue()
+        # Stopping condition
+        self.done = False
         thread = threading.Thread(target=self._frame_reader)
         # Causes thread to die when calling thread does
         thread.daemon = True
@@ -36,11 +38,16 @@ class VideoCapture:
     def _frame_reader(self):
         """Only keep the most recent frame, read constantly."""
         while True:
+            # Check if still going
+            if self.done:
+                self.cap.release()
+                return
+
             (ret, frame) = self.cap.read()
             if not self.buffer.empty():
                 # Try to discard the old frame and return val.
                 try:
-                    self.buffer.get_nowait()
+                    self.buffer.get(False)
                 except queue.Empty:
                     pass
             self.buffer.put((ret, frame))
@@ -67,7 +74,12 @@ class VideoCapture:
             return cv2.VideoCapture(src)
 
     def read(self):
+        """Get the most recent frame"""
         return self.buffer.get()
+
+    def stop(self):
+        """Tell the video capture to stop"""
+        self.done = True
 
 
 def receive():
@@ -114,6 +126,7 @@ def receive_buffer(src=None):
         if cv2.waitKey(1) & 0xFF == ord("q"):
             break
 
+    cap.stop()
     fps.stop()
     print(fps.fps())
 

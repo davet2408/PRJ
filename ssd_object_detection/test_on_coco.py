@@ -105,6 +105,10 @@ classes = [
     "hair drier",
     "toothbrush",
 ]
+# Load class labels for relavant file.
+classes = []
+with open("coco.names", "r") as f:
+    classes = [line.strip() for line in f.readlines()]
 
 images_path = "../test_images/coco_test/images/"
 
@@ -112,6 +116,9 @@ nn_input_dimensions = 300
 
 # List of all images for testing
 images_list = os.listdir(images_path)
+
+# Order images in ascending order
+images_list = sorted(images_list, key=lambda x: int(x.replace(".jpg", "")))
 
 #  Command line arguments
 parser = argparse.ArgumentParser()
@@ -170,6 +177,8 @@ if args.gpu:
     net.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
     net.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
+print(f"\n[Loading] {args.NN}")
+print(f"[Input dimensions] {nn_input_dimensions} x {nn_input_dimensions}\n")
 
 counter = 1
 
@@ -183,7 +192,7 @@ for n in range(args.samples):
     # Execution time information
     frame_start_time = time.time()
 
-    # Loading image
+    # Load image
     img = cv2.imread(images_path + images_list[n])
 
     # Make result file for this image with the same name
@@ -191,14 +200,16 @@ for n in range(args.samples):
     detection_result_path = os.path.join(detection_results, name)
     open(detection_result_path, "a")
 
-    # height, width, channels = img.shape
-    height = img.shape[0]
-    width = img.shape[1]
+    height, width, channels = img.shape
 
-    # Detecting objects
+    # Format image
     blob = cv2.dnn.blobFromImage(img, size=(300, 300), swapRB=True, crop=False)
+
+    # Run inference
     net.setInput(blob)
+    start_inf = time.time()
     outs = net.forward()
+    end_inf = time.time()
 
     # Network output information
     for detection in outs[0, 0, :, :]:
@@ -215,13 +226,12 @@ for n in range(args.samples):
             class_name = str(classes[class_id])
             # remove spaces from class names for mAP score
             class_name = class_name.replace(" ", "", 1)
-            # cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
             line = f"{class_name} {confidence:.6f} {x1} {y1} {x2} {y2}"
             add_bb_info(detection_result_path, line)
 
     # Get inference time
-    t, _ = net.getPerfProfile()
-    infer_time = t / cv2.getTickFrequency()
+    infer_time = end_inf - start_inf
+    # print(infer_time)
 
     frame_end_time = time.time() - frame_start_time
     # Write times to file
@@ -229,11 +239,9 @@ for n in range(args.samples):
 
     counter += 1
 
-    # cv2.imshow("Image", img)
-    # cv2.waitKey(0)
 
 # Time taken for code to finish
 total_time = time.time() - start_time
 add_time_info([total_time])
 
-# cv2.destroyAllWindows()
+print(f"[Time taken] {total_time}")
