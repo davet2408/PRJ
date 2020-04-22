@@ -1,3 +1,16 @@
+"""
+This program provides Object Detection to a video feed utilising threads to 
+try and enhance performance. 
+
+By default the program will execute with the optimal settings for Object 
+Detection from a GStreamer stream assumed to be from a drones perspective. 
+The command line arguments can be used to adjust performance and even switch 
+to a webcame view for testing.
+
+
+Author: David Temple
+Date: 02/03/2020
+"""
 # OpenCV module installed from https://github.com/opencv/opencv
 import cv2
 
@@ -55,6 +68,25 @@ parser.add_argument(
 args = parser.parse_args()
 
 
+def initialise_detector(model, size, gpu):
+    """Attempts to set up the Object Detection model, will exit and display 
+    issue if invalid parameters are given."""
+    try:
+        model, classes, output_layers = yolo.load_network(model, size)
+    except ValueError as err:
+        # Invalid network parameters.
+        print(str(err))
+        sys.exit(1)
+
+    # # Enable GPU
+    if gpu:
+        model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
+        # model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
+        model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
+
+    return model, classes, output_layers
+
+
 def run_inference(model, confidence, in_q, out_q, size):
     """Continually grabs frames from in_q and runs inference on that frame 
     placing the detection results in the out_q. Encapsulated in this function 
@@ -65,18 +97,10 @@ def run_inference(model, confidence, in_q, out_q, size):
     -detection-with-opencv/
     (accessed 17/02/20)
     """
-    try:
-        model, classes, output_layers = yolo.load_network(args.model, args.input_size)
-    except ValueError as err:
-        # Invalid network parameters.
-        print(str(err))
-        sys.exit(1)
 
-    # # Enable GPU
-    if args.gpu:
-        model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
-        # model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
-        model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA_FP16)
+    model, classes, output_layers = initialise_detector(
+        args.model, args.input_size, args.gpu
+    )
 
     # Run until main process terminated.
     while True:
@@ -116,7 +140,10 @@ def generate_colours(size):
     return colours
 
 
-def loop(cap, detections, in_q, out_q, args):
+def display_loop(cap, detections, in_q, out_q, args):
+    """Continually read frames and add them to the detector queue. Display 
+    predictions when available. Wait for exit command.
+    """
     # Continue reading frames until quit
     while True:
 
@@ -171,7 +198,6 @@ def loop(cap, detections, in_q, out_q, args):
 if __name__ == "__main__":
     # Load YOLO model
     multiprocessing.set_start_method("spawn")
-    classes = yolo.get_classes(args.model)
 
     # Video capture object for retriving frames.
     if args.webcam:
@@ -180,6 +206,8 @@ if __name__ == "__main__":
         cap = GStreamer_server.VideoCapture()
         # cap = cv2.VideoCapture(0)  # can be used for video files.
 
+    # Generate class list for model used.
+    classes = yolo.get_classes(args.model)
     # Assign random colours to the classes
     colours = generate_colours(len(classes))
 
@@ -198,7 +226,11 @@ if __name__ == "__main__":
     detection_process.daemon = True
     detection_process.start()
 
-    loop(cap, detections, in_q, out_q, args)
+    # Create a resizable window to display detections.
+    cv2.namedWindow("Video Feed", cv2.WINDOW_AUTOSIZE)
+
+    # Loop main thread until canceled
+    display_loop(cap, detections, in_q, out_q, args)
 
     # Clean up resources
     cv2.destroyAllWindows()
