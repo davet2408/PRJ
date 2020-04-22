@@ -68,7 +68,7 @@ parser.add_argument(
 args = parser.parse_args()
 
 
-def run_inference(model, confidence, output_layers, in_q, out_q, inference_times):
+def run_inference(model, confidence, output_layers, in_q, out_q, size):
     """Continually grabs frames from in_q and runs inference on that frame 
     placing the detection results in the out_q. Encapsulated in this function 
     so that it can be executed in a separate process.

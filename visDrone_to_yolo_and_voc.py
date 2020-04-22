@@ -1,6 +1,15 @@
+"""
+Script to convert the VisDrone systle data into YOLO and VOC format.
+
+Author: David Temple
+Date: 02/02/2020
+"""
+# Python standard library modules
 import os
 import sys
 import cv2
+
+# numpy module installed via pip https://numpy.org
 import numpy as np
 
 
@@ -10,6 +19,7 @@ def add_line(path, line):
         file.write(line + "\n")
 
 
+# Class labels for retraining v1
 # class_label = {
 #     "0": ("Ignore", ""),
 #     "1": ("Pedestrian", "0"),
@@ -25,6 +35,8 @@ def add_line(path, line):
 #     "10": ("Motor", "8"),
 #     "11": ("Others", "9"),
 # }
+
+# Class labels for retraining v2
 class_label = {
     "0": ("Ignore", ""),
     "1": ("Pedestrian", "0"),
@@ -148,45 +160,6 @@ for task in ["train", "test-dev", "val"]:
                     add_line(obj + annotation, yolo_line)
                 add_line(yolo_annotations_dir + annotation, yolo_line)
                 add_line(voc_annotations_dir + annotation, voc_line)
-
-                # voc_lines.append(voc_line)
-                # yolo_lines.append(yolo_line)
-
-                # voc style
-                # bbs.append([line[5], x1, x2, y1, y2])
-
-                # yolo style
-                # bbs.append([line[5], mid_x * dw, mid_y * dh, bb_w * dw, bb_h * dh])
-
-            # font = cv2.FONT_HERSHEY_COMPLEX_SMALL
-            # for i in range(len(bbs)):
-            #     # from voc format
-            #     # class_i, x1, x2, y1, y2 = bbs[i]
-
-            #     # from yolo
-            #     class_i = bbs[i][0]
-            #     center_x = int(bbs[i][1] * width)
-            #     center_y = int(bbs[i][2] * height)
-            #     w = int(bbs[i][3] * width)
-            #     h = int(bbs[i][4] * height)
-
-            #     # Rectangle coordinates
-            #     x = int(center_x - w / 2)
-            #     y = int(center_y - h / 2)
-
-            #     color = colors[int(class_i)]
-            #     label = class_label[class_i][0]
-
-            #     # voc
-            #     # cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
-            #     # cv2.putText(img, label, (x1, y1), font, 3, color, 2)
-
-            #     # yolo
-            #     cv2.rectangle(img, (x, y), (x + w, y + h), color, 2)
-
-            # cv2.imshow("Image", img)
-            # cv2.waitKey(0)
-            # cv2.destroyAllWindows()
 
             if skips == len(lines):
                 # All annotations are ignored so entire file skipped

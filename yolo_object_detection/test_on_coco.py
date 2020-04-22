@@ -1,32 +1,53 @@
+"""
+This module provides code to run yolo Object Detection on the given folder
+of images and save the prediction in voc format to results/detection-results.
+Timing information for both code execution and inference time is also 
+recorded to a CSV file "results/time-results.csv".
+
+detection-results can then be passed to the mapscore library to generate a
+mAP score for these detections against the ground truth values for the data.
+
+
+Author: David Temple
+Date: 02/03/2020
+"""
+# OpenCV module installed from https://github.com/opencv/opencv
+import cv2
+
+# numpy module installed via pip https://numpy.org
+import numpy as np
+
+# Python standard library modules
 import os
 import csv
 import shutil
 import time
-import cv2
-import numpy as np
 import argparse
-import yolo
 import sys
 
-# Compatible networks
-NETWORKS = ["yolov3", "yolov3-tiny", "yolov3-tiny-prn"]
-INPUT_SIZES = [320, 416, 608]
+# Hand made modules
+import yolo
 
-CONFIDENCE_THRESHOLD = 0.5
-MNS_THRESHOLD = 0.4
-
-images_path = "../test_images/coco_test/images/"
-
-# List of all images for testing
-images_list = os.listdir(images_path)
-
-# Order images in ascending order
-images_list = sorted(images_list, key=lambda x: int(x.replace(".jpg", "")))
 
 #  Command line arguments
 parser = argparse.ArgumentParser()
 parser.add_argument(
-    "-n", "--NN", default="yolov3", help="network to use; " + str(NETWORKS),
+    "-m",
+    "--model",
+    default="yolov3",
+    help="network to use: " + str(yolo.NETWORKS.keys()),
+)
+parser.add_argument(
+    "-c", "--conf", default=0.5, type=float, help="Set the detection threshold"
+)
+parser.add_argument(
+    "--NMS", default=0.4, type=float, help="Non Maximum Supression threshold"
+)
+parser.add_argument(
+    "-d",
+    "--data",
+    default="../test_images/coco_test/images/",
+    help="relative path of dataset to use",
 )
 parser.add_argument(
     "-s", "--samples", default=None, type=int, help="number of images to test on",
@@ -39,6 +60,18 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+# Select dataset
+images_path = args.data if args.data[-1] == "/" else args.data + "/"
+# List of all images for testing
+images_list = os.listdir(images_path)
+# Order images in ascending order if possible
+images_list = sorted(
+    images_list,
+    key=lambda x: int(x.replace(".jpg", ""))
+    if x.replace(".jpg", "").isnumeric()
+    else 1,
+)
+
 # Default to all images
 if args.samples is None or args.samples >= len(images_list):
     print(f"max number of samples is {len(images_list)}")
@@ -46,7 +79,7 @@ if args.samples is None or args.samples >= len(images_list):
 
 # Load Yolo
 try:
-    model, classes, output_layers = yolo.load_network(args.NN, args.input_size)
+    model, classes, output_layers = yolo.load_network(args.model, args.input_size)
 except ValueError as err:
     # Invalid network parameters.
     print(str(err))
@@ -57,7 +90,8 @@ if args.gpu:
     model.setPreferableBackend(cv2.dnn.DNN_BACKEND_CUDA)
     model.setPreferableTarget(cv2.dnn.DNN_TARGET_CUDA)
 
-print(f"\n[Loading] {args.NN}")
+print(f"\n[Data] {args.data}\n")
+print(f"\n[Loading] {args.model}")
 print(f"[Input dimensions] {args.input_size} x {args.input_size}\n")
 
 # Directories for results
@@ -93,18 +127,18 @@ counter = 1
 start_time = time.time()
 
 # Run inference on each image
-for n in range(args.samples):
+for test_image in images_list:
     # Current image being processed
-    print(f"Image:  ({counter}/{args.samples})   {images_list[n]}")
+    print(f"Image:  ({counter}/{args.samples})   {test_image}")
 
     # Execution time information
     frame_start_time = time.time()
 
-    # Loading image
-    img = cv2.imread(images_path + images_list[n])
+    # Load image
+    img = cv2.imread(images_path + test_image)
 
     # Make result file for this image with the same name
-    name = images_list[n].replace(".jpg", ".txt")
+    name = test_image.replace(".jpg", ".txt")
     detection_result_path = os.path.join(detection_results, name)
     open(detection_result_path, "a")
 
@@ -121,13 +155,11 @@ for n in range(args.samples):
 
     # Network prediction information
     class_ids, confidences, boxes = yolo.get_detections(
-        layer_outputs, width, height, CONFIDENCE_THRESHOLD
+        layer_outputs, width, height, args.conf
     )
 
     # Non-maximal supresion to remove duplicate detections
-    nms_indexes = cv2.dnn.NMSBoxes(
-        boxes, confidences, CONFIDENCE_THRESHOLD, MNS_THRESHOLD
-    )
+    nms_indexes = cv2.dnn.NMSBoxes(boxes, confidences, args.conf, args.NMS)
 
     # Get final prediction information.
     # Based on code from:
@@ -150,7 +182,7 @@ for n in range(args.samples):
 
     frame_end_time = time.time() - frame_start_time
     # Write times to file
-    add_time_info([round(frame_end_time, 5), round(inf_time, 5), images_list[n]])
+    add_time_info([round(frame_end_time, 5), round(inf_time, 5), test_image])
 
     # Increment image counter.
     counter += 1
