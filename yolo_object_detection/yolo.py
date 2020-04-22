@@ -87,6 +87,15 @@ def load_network(network, size):
         )
 
 
+def get_classes(network):
+    # Load class labels for relavant file.
+    classes = []
+    with open(f"names/{NETWORKS[network]}.names", "r") as f:
+        classes = [line.strip() for line in f.readlines()]
+
+    return classes
+
+
 def get_blob(frame, size):
     """Wrapper around OpenCV blobFromImage function for ease of use.
     
