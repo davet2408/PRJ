@@ -1,8 +1,18 @@
+"""
+Script to move files from test set to training set and leave only 500 test
+images behind.
+
+Author: David Temple
+Date: 02/03/2020
+"""
+# Python standard library modules
 import os
 import sys
 import cv2
-import numpy as np
 import random
+
+# numpy module installed via pip https://numpy.org
+import numpy as np
 
 
 def add_line(path, line):
@@ -13,14 +23,14 @@ def add_line(path, line):
 
 # File paths
 train_path = "data/obj/"
-image_dir = "test_images/visDrone/VisDrone2019-DET-test-dev/images/"
-obj = "test_images/visDrone/yolo-training-server/training-files/obj/"
-train = "test_images/visDrone/yolo-training-server/training-files/train.txt"
-test = "test_images/visDrone/yolo-training-server/VisDrone-test-dev-yolo/"
-test_voc = "test_images/visDrone/yolo-training-server/VisDrone-test-dev-voc/"
+image_dir = "../test_images/visDrone/VisDrone2019-DET-test-dev/images/"
+obj = "../test_images/visDrone/yolo-training-server/training-files/obj/"
+train = "../test_images/visDrone/yolo-training-server/training-files/train.txt"
+test = "../test_images/visDrone/yolo-training-server/VisDrone-test-dev-yolo/"
+test_voc = "../test_images/visDrone/yolo-training-server/VisDrone-test-dev-voc/"
 
 # New directory for smaller test set
-test_images500 = "test_images/visDrone/yolo-training-server/test_images500/"
+test_images500 = "../test_images/visDrone/yolo-training-server/test_images500/"
 os.mkdir(test_images500)
 
 # Original test set

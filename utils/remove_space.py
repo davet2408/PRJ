@@ -1,3 +1,4 @@
+# Python standard library modules
 import os
 import sys
 

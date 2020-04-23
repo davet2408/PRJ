@@ -55,13 +55,11 @@ class_label = {
 
 ignore = ["0", "11"]
 
-colors = np.random.uniform(0, 255, size=(len(class_label), 3))
-
-image_dir = "test_images/visDrone/"
+image_dir = "../test_images/visDrone/"
 
 train_path = "data/obj/"
 
-obj = "test_images/visDrone/obj/"
+obj = "../test_images/visDrone/obj/"
 
 try:
     os.makedirs(obj, exist_ok=False)
