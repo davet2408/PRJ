@@ -55,6 +55,10 @@ parser.add_argument(
 args = parser.parse_args()
 
 
+INPUT_DIMENSIONS = 300
+MODEL = "MobileNetSSD_V2"
+
+
 def run_infernce(frame, args, model, classes):
     """Runs Object Detection on the given frame. Adds bounding box predictions
     to the frame with the class colours provided stating confidence score.
@@ -104,10 +108,8 @@ def run_infernce(frame, args, model, classes):
             )
 
 
-INPUT_DIMENSIONS = 300
-MODEL = "MobileNetSSD_V2"
-
 # Load class labels for relavant file.
+# Based on https://pysource.com/2019/06/27/yolo-object-detection-using-opencv-with-python/
 classes = []
 with open("coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]

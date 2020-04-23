@@ -48,6 +48,7 @@ MODEL = "MobileNetSSD_V2.pb"
 INPUT_DIMENSIONS = 300
 
 # Load class labels for relavant file.
+# Based on https://pysource.com/2019/06/27/yolo-object-detection-using-opencv-with-python/
 classes = []
 with open("coco.names", "r") as f:
     classes = [line.strip() for line in f.readlines()]
