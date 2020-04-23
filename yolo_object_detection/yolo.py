@@ -68,9 +68,7 @@ def load_network(network, size):
         net = cv2.dnn.readNet(f"weights/{network}.weights", f"cfg/{network}.cfg")
 
         # Load class labels for relavant file.
-        classes = []
-        with open(f"names/{NETWORKS[network]}.names", "r") as f:
-            classes = [line.strip() for line in f.readlines()]
+        classes = get_classes(network)
 
         layer_names = net.getLayerNames()
         # Get the output layers from each scale (unconnected layers).
@@ -89,6 +87,7 @@ def load_network(network, size):
 
 def get_classes(network):
     # Load class labels for relavant file.
+    # Based on https://pysource.com/2019/06/27/yolo-object-detection-using-opencv-with-python/
     classes = []
     with open(f"names/{NETWORKS[network]}.names", "r") as f:
         classes = [line.strip() for line in f.readlines()]
