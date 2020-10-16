@@ -2,7 +2,36 @@
 
 This code has been developed to run on the hardware listed in the 
 accompanying report and therefore is unlikely to work on other setups.
-Details can be found in Appendix C.
+
+Hardware
+• Raspberry Pi 3b+
+– 2.5V micro USB power supply
+– 32GB micro SD memory card
+– Rasbian OS - https://www.raspberrypi.org/downloads/
+• Nvidia Jetson Nano
+– Waveshare AC8265 module
+– suitable antenna
+– 5V barrel jack power supply
+– 64GB micro SD memory card
+– JetPack SDK 4.3 - https://developer.nvidia.com/jetpack-43-archive
+• MacBook Pro 2015 retina
+– 2.5 GHz Quad-Core Intel Core i7 CPU
+127
+– 16 GB DDR3 RAM – macOS Catalina
+• Gaming computer
+– Octa-core Intel i7 CPU
+– NVIDIA GEFORCE RTX 2070 GPU
+– 32 GB DDR4 RAM
+– Ubuntu18.04-https://ubuntu.com/download/desktop/thank-you?version=18. 04.4&architecture=amd64
+• Raspberry Pi camera v2
+• ENERGENIEPowerMeter-https://www.amazon.co.uk/Energenie-429-856UK-Power-Meter/
+     dp/B003ELLGDC
+Software
+For all systems
+• Python 3.6 or later will be available through the systems package manger. • GStreamer 1.10 will be available through the systems package manger.
+– gst-libav
+– gst-plugins-base – gst-plugins-good – gst-plugins-bad – gst-plugins-ugly
+The latest CUDA drives will need to be installed on the Nano and GPU desktop. This can be a long process and requires some patience. More detail on instillation can be found at https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html
 
 An example of the code running can be found here: https://drive.google.com/open?id=1M7PIKmyH1iZ7qA_AX7DNzdudKgtHCDpZ
 
