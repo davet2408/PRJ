@@ -1,0 +1,6 @@
+These files are converted from .ipynb and will not run as normal python 
+programs. They must be uploaded to google colab and run on a colab instance 
+with a GPU.
+
+Google colab:
+https://colab.research.google.com/notebooks/intro.ipynb
