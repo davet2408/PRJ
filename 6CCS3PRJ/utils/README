@@ -1,0 +1,17 @@
+The scripts in this file have been written to make dealing with the VisDrone
+dataset easier and to convert them to a usable format for training YOLOv3.
+
+The resulting data used for training can be downloaded from:
+(this is a large file and will take a long time to download)
+https://drive.google.com/open?id=1N9DRJqtbdpNbSuwtzwGOE1dnCbGY_BEr
+
+This directory should be unzipped and placed in "test_image" 
+named "visDrone"
+
+The VisDrone2019-DET dataset is available from this github:
+https://github.com/VisDrone/VisDrone-Dataset
+
+train, val and test sets should be downloaded and added to the "visDrone" 
+folder inside of "test_images".
+
+This will allow the use of these scripts.

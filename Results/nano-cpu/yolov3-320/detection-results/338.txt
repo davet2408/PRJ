@@ -1,2 +1,0 @@
-parkingmeter 0.978070 92 34 168 236
-parkingmeter 0.992829 169 39 237 236

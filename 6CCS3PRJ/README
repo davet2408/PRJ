@@ -1,0 +1,96 @@
+############### SETUP REQUIREMENTS ###############
+
+This code has been developed to run on the hardware listed in the 
+accompanying report and therefore is unlikely to work on other setups.
+Details can be found in Appendix C.
+
+An example of the code running can be found here: https://drive.google.com/open?id=1M7PIKmyH1iZ7qA_AX7DNzdudKgtHCDpZ
+
+OpenCV 4.2 or higher and contrib files are required and must be built 
+with GStreamer and CUDA support by setting the flags below appropriately
+when using cmake:
+
+-D WITH_CUDNN
+-D OPENCV_DNN_CUDA
+-D ENABLE_FAST_MATH
+-D CUDA_FAST_MATH
+-D CUDA_ARCH_BIN
+-D WITH_CUBLAS
+-D GSTREAMER=ON
+
+Required files can be downloaded from this link:
+https://drive.google.com/open?id=1M0VE5YKYR_E7cBlyUyu-aB6OHbWoUwNI
+
+This will contain a directory "project_data", unzip the folder.
+The subdirectory “coco_test” should be placed into the “test_images” directory.
+The subdirectory “weights” will contain 2 further sub directories: 
+“MobileNetSSD_V2.pb” which should be placed in the – 
+“ssd_object_detection/weights” directory.
+Then the contents of the other subdirectory “yolo-weights” should be moved into
+the “yolo_object_detection/weights” directory.
+Take care that the names remain unchanged. 
+
+Finally, if not done so already, it is recommended to use a Python virtual 
+Environment in which requirements can be installed using 
+‘pip install -r requirements.txt’ in the root directory. 
+
+############### USAGE ###############
+
+The main program of this work is “stream_detection.py” found in the 
+“yolo_object_detection” directory.
+
+First the stream will need to be started on the Nano or Pi, this is done using 
+the commands that are listed in “GStreamer_send_commands.txt”. Once running, on 
+the receiving computer cd into the “yolo_object_detection” directory and run 
+“stream_detection.py” using python (python stream_detection.py).
+The output of the stream running YOLOv3-608 retrainedv2 will display in a 
+window. To exit the stream press “q” or issue a keyboard interrupt. Likewise, 
+to stop streaming from the Nano or Pi use a keyboard interrupt.
+Running “python stream_detection.py -h” will list a set of command line 
+arguments that can be used to change the Object Detection model used, size of 
+input to the model, display text on predictions or not, run with gpu, change 
+the confidence or NMS thresholds used or finally to change input to webcam if 
+one is connected. Timing values are saved to CSV in the “results” directory.
+
+Other runnable yolo programs:
+
+“yolo_object_detection.py” – Runnable with its own set of command line options 
+revealed through “python yolo_object_detection.py -h”. By default, it will run 
+on an image from “test_images/drone_test_images” but any image can be supplied 
+through “--images” with a relative path and it will attempt to run object 
+detection on it. For general images “-m yolov3” is recommended but for drone 
+images the default detector is best. Can also be run on webcam input with 
+argument “-w 1”.
+
+“test_on_coco.py” – This will run performance tests as described in Chapter 4 
+of the report and again has command line arguments revealed with “-h”.  
+Results are saved to “results”.
+
+
+Runnable SSD programs:
+
+Cd to “ssd_object_detection” from the root directory.
+
+“ssd_object_detection.py” – Runnable with its own set of command line options 
+revealed through “python ssd_object_detection.py -h”. By default, it will run 
+on an image from “test_images/coco_test” but any image can be supplied through 
+“--images” with a relative path and it will attempt to run object detection on 
+it. The input size and models are fixed but can be run on webcam input with 
+argument “-w 1”.
+
+“test_on_coco.py” – This will run performance tests as described in Chapter 4 
+of the report and again has command line arguments revealed with “-h”.  
+Results are saved to “results”.
+
+
+############### OTHER ###############
+
+
+The “utils” directory contains its own README with instructions for those 
+scripts, however these were used in development but not intended for wider use.
+
+The code in “colab_files” again was used in development but are not 
+intended for wider use, however they should work following the instructions 
+given in the report.
+
+

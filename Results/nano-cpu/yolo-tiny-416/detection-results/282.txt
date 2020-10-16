@@ -1,2 +1,0 @@
-sportsball 0.613871 295 6 331 31
-parkingmeter 0.375774 228 72 283 170
